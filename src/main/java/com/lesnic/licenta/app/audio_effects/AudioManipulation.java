@@ -92,7 +92,6 @@ public class AudioManipulation {
             // set current byte array and audio input stream from the provided
             // File
             wavArrays.setSampleArrayWav(audioArray);
-            // wavArrays.setOriginalArrayWav(audioArray);
             wavArrays.setAudioIn(audioIn);
 
             audioLine.drain();
@@ -121,14 +120,15 @@ public class AudioManipulation {
         short[] bit16Array = new short[audioArraySize / 2];
         short[] bit8Array = new short[audioArraySize];
         if (bitPerSamples == 16) {
+            System.out.println(audioFormat);
             if (audioFormat.isBigEndian()) {
-                for (int i = 0, j = 0; i < audioArraySize / 2; i++, j += 2) {
+                for (int i = 0, j = 0; i < audioArraySize / 2; i++, j++) {
                     bit16Array[i] = getSampleBigEndian(inputArray, j);
                 }
                 wavArrays.setBitArrayWav(bit16Array);
 
             } else {
-                for (int i = 0, j = 0; i < audioArraySize / 2; i++, j += 2) {
+                for (int i = 0, j = 0; i < audioArraySize / 2; i++, j++) {
                     bit16Array[i] = getSampleLittleEndian(inputArray, j);
                 }
                 wavArrays.setBitArrayWav(bit16Array);
@@ -179,13 +179,14 @@ public class AudioManipulation {
     }
 
     public static short getSampleLittleEndian(byte[] buffer, int position) {
-        return (short) (((buffer[position + 1] & 0xff) << 8) | (buffer[position] & 0xff));
+        return (short) (((buffer[2 * position + 1] & 0xff) << 8) | (buffer[2 * position] & 0xff));
     }
 
     public static void setSampleLittleEndian(byte[] buffer, int position,
             short sample) {
-        buffer[position] = (byte) (sample & 0xff);
-        buffer[position + 1] = (byte) ((sample >> 8) & 0xff);
+        buffer[2 * position] = (byte) (sample);
+        buffer[2 * position + 1] = (byte) (sample >> 8);
+
     }
 
     public static short getSampleBigEndian(byte[] buffer, int position) {

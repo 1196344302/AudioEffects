@@ -3,8 +3,11 @@ package com.lesnic.licenta.app.audio_effects;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.util.List;
 
 import org.jtransforms.fft.DoubleFFT_1D;
+
+import com.lesnic.licenta.app.model.Complex;
 
 public class JTransformImpl {
 
@@ -12,6 +15,7 @@ public class JTransformImpl {
     private double[] magnitude;
     private DoubleFFT_1D fft;
     private WavArrays audio = WavArrays.getInstance();
+    private List<Complex> complexList;
 
     /**
      * Computes 1D forward DFT of complex data leaving the result in a. Complex
@@ -28,11 +32,10 @@ public class JTransformImpl {
         double[] complexArray = new double[byteArr.length * 2];
         for (int i = 0; i < byteArr.length; i++) {
             complexArray[i] = (double) byteArr[i];
-            complexArray[i + 1] = 0.0;
         }
 
         fft = new DoubleFFT_1D(byteArr.length);
-        HanningWindow(complexArray, 0, complexArray.length);
+        // HanningWindow(complexArray, 0, 2048);
         fft.realForward(complexArray);
 
         return complexArray;
@@ -43,7 +46,7 @@ public class JTransformImpl {
      */
     public void calcMangFreq(double[] input) {
         double sampleRate = audio.getAudioIn().getFormat().getSampleRate();
-        double re, im, aux;
+        double re, im;
         int size = input.length / 2;
         freg = new double[size];
         magnitude = new double[size];
@@ -51,7 +54,7 @@ public class JTransformImpl {
             re = input[2 * i];
             im = input[2 * i + 1];
             magnitude[i] = Math.sqrt(re * re + im * im);
-            magnitude[i] = 20 * Math.log10(magnitude[i]);
+            magnitude[i] = 20 * Math.log(10) * Math.log10(magnitude[i]);
             freg[i] = (double) i * sampleRate / (double) size;
 
         }
@@ -78,7 +81,7 @@ public class JTransformImpl {
     public short[] calcInverseFFT(double[] input) {
         short[] wavByteArray = null;
         if (fft != null) {
-            fft.complexInverse(input, true);
+            fft.realInverse(input, true);
             int size = input.length / 2;
             wavByteArray = new short[size];
             for (int i = 0; i < size; i++) {
@@ -97,7 +100,7 @@ public class JTransformImpl {
     public double getMaxFreq() {
         int maxIndex = 0;
         double maxFreq = magnitude[0];
-        for (int i = 0; i < magnitude.length; i++) {
+        for (int i = 0; i < magnitude.length / 2; i++) {
             if (maxFreq < magnitude[i]) {
                 maxFreq = magnitude[i];
                 maxIndex = i;

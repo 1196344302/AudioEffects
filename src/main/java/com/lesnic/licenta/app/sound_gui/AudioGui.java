@@ -2,10 +2,16 @@ package com.lesnic.licenta.app.sound_gui;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -24,6 +30,7 @@ import javafx.stage.Stage;
 import com.lesnic.licenta.app.audio_effects.AudioManipulation;
 import com.lesnic.licenta.app.audio_effects.JTransformImpl;
 import com.lesnic.licenta.app.audio_effects.WavArrays;
+import com.lesnic.licenta.app.model.LinearEq;
 
 public class AudioGui extends Application implements EventHandler<ActionEvent> {
     WavArrays audioStream = WavArrays.getInstance();
@@ -45,6 +52,8 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
     private double[] fftArray;
     private short[] ifftArray;
     private short[] sampleArray;
+    private Slider slider;
+    private HBox eqSliders = new HBox(10);
 
     @Override
     public void start(final Stage stage) throws Exception {
@@ -57,6 +66,7 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
         VBox root = new VBox();
         VBox rootVSlider = new VBox(10);
         VBox rootSlName = new VBox(5);
+
         HBox rootLoad = new HBox();
         HBox rootAllSlider = new HBox(10);
 
@@ -103,8 +113,42 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
                 for (int i = 0; i < originalArray.length; i++) {
                     originalArray[i] = audioStream.getSampleArrayWav()[i];
                 }
+                audio.setWavGraph(audioStream.getSampleArrayWav());
             }
         });
+        ckBoxSpectrum.selectedProperty().addListener(
+                new ChangeListener<Boolean>() {
+                    public void changed(
+                            ObservableValue<? extends Boolean> observable,
+                            Boolean oldValue, Boolean newValue) {
+                        if (newValue) {
+                            audio.setWavGraph(audioStream.getSampleArrayWav());
+                            sampleArray = audioStream.getBitArrayWav();
+                            fft.writeTxt(sampleArray, "out/originalSamples");
+                            fftArray = fft.calcFFT(sampleArray);
+                            fft.writeTxt(fftArray, "out/fft");
+                            fft.calcMangFreq(fftArray);
+
+                            createMonitoredSlider(31, fftArray, eqSliders);
+                            createMonitoredSlider(63, fftArray, eqSliders);
+                            createMonitoredSlider(87, fftArray, eqSliders);
+                            createMonitoredSlider(125, fftArray, eqSliders);
+                            createMonitoredSlider(175, fftArray, eqSliders);
+                            createMonitoredSlider(250, fftArray, eqSliders);
+                            createMonitoredSlider(350, fftArray, eqSliders);
+                            createMonitoredSlider(500, fftArray, eqSliders);
+                            createMonitoredSlider(700, fftArray, eqSliders);
+                            createMonitoredSlider(1000, fftArray, eqSliders);
+                            createMonitoredSlider(1400, fftArray, eqSliders);
+                            createMonitoredSlider(2800, fftArray, eqSliders);
+                            createMonitoredSlider(4000, fftArray, eqSliders);
+                            createMonitoredSlider(5600, fftArray, eqSliders);
+                            createMonitoredSlider(8000, fftArray, eqSliders);
+
+                        }
+                    }
+                });
+
         ScrollPane sp = new ScrollPane();
         sp.setPrefSize(stage.getMaxWidth(), 400);
         sp.setContent(canvas);
@@ -115,7 +159,7 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
         root.getChildren().addAll(playBtn, loadBtn, rootLoad, echoBtn,
                 ckBoxSpectrum);
         root.getChildren().add(sp);
-        rootAllSlider.getChildren().addAll(rootSlName, rootVSlider);
+        rootAllSlider.getChildren().addAll(rootSlName, rootVSlider, eqSliders);
         root.getChildren().add(rootAllSlider);
         stage.setScene(new Scene(root));
         stage.show();
@@ -128,7 +172,7 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
      * @param gc
      */
     private void drawTime(GraphicsContext gc, int zoom) {
-        audio.setWavGraph(audioStream.getSampleArrayWav());
+
         short[] audioBits = audioStream.getBitArrayWav();
         int audioBitSize = audioBits.length;
         gc.setFill(Color.WHITE);
@@ -138,7 +182,7 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
         gc.setStroke(Color.BLUE);
         double y_last = 0;
         for (int i = 0; i < audioBitSize; i++) {
-            double y_new = -audioBits[i] / 100;
+            double y_new = -audioBits[i] / 150;
             gc.strokeLine(i / zoom, y_new + 200, (i + 1) / zoom, y_last + 200);
             y_last = y_new;
         }
@@ -152,14 +196,42 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
         gc.setFill(Color.GREEN);
         gc.setStroke(Color.BLUE);
         double y_last = 0;
-        for (int i = 0; i < fft.getFreg().length - 1; i++) {
+        for (int i = 0; i < fft.getFreg().length; i++) {
             double y_new = -(fft.getMagnitude()[i]);
-            gc.strokeLine(fft.getFreg()[i] / zoom, 500,
-                    fft.getFreg()[i] / zoom, y_new + 500);
+            gc.strokeLine(50 + fft.getFreg()[i] / zoom, 1000,
+                    50 + fft.getFreg()[i] / zoom, y_new + 1000);
             // gc.strokeLine(fft.getFreg()[i] / zoom, y_new + 1000,
             // fft.getFreg()[i + 1] / zoom, y_last + 1000);
             // y_last = y_new;
         }
+
+    }
+
+    private void drawSpectrum(GraphicsContext gc, int freq, int i) {
+        int magnIndex = 0;
+        double freqVal = 0;
+        double magnVal;
+        List<Double> freqList = new ArrayList<Double>();
+        for (Double d : fft.getFreg()) {
+            freqList.add(d);
+        }
+        Collections.sort(freqList);
+        for (int j = 0; j < freqList.size(); j++) {
+            if (freqList.get(j) > freq) {
+                freqVal = freqList.get(j);
+                break;
+            }
+        }
+        for (int j = 0; j < fft.getFreg().length; j++) {
+            if (fft.getFreg()[j] == freqVal) {
+                magnIndex = j;
+                break;
+            }
+
+        }
+        magnVal = fft.getMagnitude()[magnIndex];
+        System.out.println(magnIndex);
+        gc.fillRect(30 * i, 100, 20, magnVal);
 
     }
 
@@ -177,29 +249,60 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
 
         } else if (event.getSource() == graphBtn) {
             if (ckBoxSpectrum.isSelected()) {
-                audio.setWavGraph(audioStream.getSampleArrayWav());
-                sampleArray = audioStream.getBitArrayWav();
-                fft.writeTxt(sampleArray, "out/originalSamples");
-                fftArray = fft.calcFFT(sampleArray);
-                fft.writeTxt(fftArray, "out/fft");
-                fft.calcMangFreq(fftArray);
-                // fft.lowPassFilter(fftArray, 50);
-
                 ifftArray = fft.calcInverseFFT(fftArray);
-                // audio.samplesToByte(ifftArray);
-
-                // fft.writeTxt(ifftArray, "out/ifftByteArray");
-
-                fft.writeTxt(fft.getMagnitude(), "magnitudee");
-                fft.getMaxFreq();
                 drawFreq(gc, Integer.parseInt(zoomTxt.getText()));
+                audio.samplesToByte(ifftArray);
             } else {
+                audio.samplesToByte(audioStream.getBitArrayWav());
                 drawTime(gc, Integer.parseInt(zoomTxt.getText()));
+
             }
         } else if (event.getSource() == echoBtn) {
             double delay = echoDelaySlider.getValue();
             float decay = (float) echoDecaySlider.getValue();
             audio.echoEffect(originalArray, delay, decay);
         }
+    }
+
+    private Slider createMonitoredSlider(final int freq,
+            final double[] iFFtArray, HBox vbox) {
+
+        final Slider slider = new Slider(-100, 100, 0);
+        vbox.getChildren().add(slider);
+        slider.setOrientation(Orientation.VERTICAL);
+        slider.setMajorTickUnit(1);
+        slider.setShowTickMarks(true);
+        slider.setShowTickLabels(true);
+        slider.setMinHeight(Slider.USE_PREF_SIZE);
+        slider.valueChangingProperty().addListener(
+                new ChangeListener<Boolean>() {
+                    public void changed(
+                            ObservableValue<? extends Boolean> observableValue,
+                            Boolean wasChanging, Boolean changing) {
+                        if (wasChanging) {
+                            if (slider.getValue() < 0) {
+                                double offset = -slider.getValue();
+                                System.out.println("slider Value " + offset);
+                                final LinearEq lineEq = new LinearEq(0, 0,
+                                        offset, offset);
+                                lineEq.linearInterpolation(freq, iFFtArray,
+                                        freq, true);
+                                fft.writeTxt(iFFtArray, "out/fftInterpolated");
+                            } else {
+                                double offset = slider.getValue();
+                                System.out.println("slider Value " + offset);
+                                final LinearEq lineEq = new LinearEq(0, 0,
+                                        offset, offset);
+                                lineEq.linearInterpolation(freq, iFFtArray,
+                                        freq, true);
+                                fft.writeTxt(iFFtArray, "out/fftInterpolated");
+
+                            }
+                        }
+                    }
+                });
+
+        return slider;
+
     }
 }
