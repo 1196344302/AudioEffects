@@ -70,6 +70,14 @@ public class LinearEq {
         }
     }
 
+    public void ZeroInterpolation(int freq, double[] input, int freqOffset) {
+        int maxFreq;
+        maxFreq = freq + freqOffset;
+        for (int i = 1; i < maxFreq * 2; i++) {
+            input[i] = 0;
+        }
+    }
+
     public double getA() {
         return a;
     }

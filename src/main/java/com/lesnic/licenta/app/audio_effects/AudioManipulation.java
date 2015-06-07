@@ -11,11 +11,17 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
+import com.lesnic.licenta.app.model.EqSizes;
+import com.lesnic.licenta.app.sound_gui.AudioGui;
+
 /**
  * Create a instance for 16 bit Wav audio manipulation (time domain)
  * 
  */
 public class AudioManipulation {
+    public static final int SOUND_BUFFER = 44100;
+    private FFTImpl fft = new FFTImpl();
+    private EqSizes eqSizes = new EqSizes();
     WavArrays wavArrays = WavArrays.getInstance();
 
     /**
@@ -27,8 +33,15 @@ public class AudioManipulation {
      * @throws IOException
      */
     public void playWav() throws IOException {
+        // reverbEffect(100, 0.6f);
         // get the current byte array
         byte[] inputPlay = wavArrays.getSampleArrayWav();
+        byte[] audioBuffer = new byte[SOUND_BUFFER];
+
+        double[] fftOutput;
+        short[] ifftOutput;
+        long startTime;
+        long endTime;
         AudioInputStream audioIn = wavArrays.getAudioIn();
         AudioFormat audioFormat = audioIn.getFormat();
         DataLine.Info info = new DataLine.Info(SourceDataLine.class,
@@ -39,8 +52,32 @@ public class AudioManipulation {
             audioLine = (SourceDataLine) AudioSystem.getLine(info);
             audioLine.open(audioFormat);
             audioLine.start();
-            audioLine.write(inputPlay, 0, inputPlay.length);
+            for (int i = 0; i < inputPlay.length / SOUND_BUFFER; i++) {
 
+                for (int j = 0; j < SOUND_BUFFER; j++) {
+                    audioBuffer[j] = inputPlay[(i * SOUND_BUFFER) + j];
+                }
+                computeWavSamples(audioBuffer);
+                fftOutput = fft.calcFFT(wavArrays.getBitArrayWav());
+                fft.calcMangFreq(fftOutput);
+                ifftOutput = fft.calcInverseFFT(fftOutput);
+                samplesToByte(ifftOutput);
+                audioBuffer = wavArrays.getSampleArrayWav();
+                audioLine.write(audioBuffer, 0, audioBuffer.length);
+                AudioGui.getEqLine31().setHeight(fft.getMagnitude()[30] / 2);
+                AudioGui.getEqLine63().setHeight(fft.getMagnitude()[62] / 2);
+                AudioGui.getEqLine125().setHeight(fft.getMagnitude()[124] / 2);
+                AudioGui.getEqLine250().setHeight(fft.getMagnitude()[249] / 2);
+                AudioGui.getEqLine500().setHeight(fft.getMagnitude()[499] / 2);
+                AudioGui.getEqLine1k().setHeight(fft.getMagnitude()[999] / 2);
+                AudioGui.getEqLine2k().setHeight(fft.getMagnitude()[1999] / 2);
+                AudioGui.getEqLine4k().setHeight(fft.getMagnitude()[3999] / 2);
+                AudioGui.getEqLine8k().setHeight(fft.getMagnitude()[7999] / 2);
+                AudioGui.getEqLine16k()
+                        .setHeight(fft.getMagnitude()[15999] / 2);
+
+            }
+            // audioLine.write(inputPlay, 0, inputPlay.length);
         } catch (LineUnavailableException e) {
             e.printStackTrace();
         } finally {
@@ -112,7 +149,7 @@ public class AudioManipulation {
      * 
      * @param byte array with Wav samples
      */
-    public void setWavGraph(byte[] inputArray) {
+    public void computeWavSamples(byte[] inputArray) {
         AudioInputStream audioIn = wavArrays.getAudioIn();
         AudioFormat audioFormat = audioIn.getFormat();
         int bitPerSamples = audioFormat.getSampleSizeInBits();
@@ -122,14 +159,14 @@ public class AudioManipulation {
         if (bitPerSamples == 16) {
             System.out.println(audioFormat);
             if (audioFormat.isBigEndian()) {
-                for (int i = 0, j = 0; i < audioArraySize / 2; i++, j++) {
-                    bit16Array[i] = getSampleBigEndian(inputArray, j);
+                for (int i = 0; i < audioArraySize / 2; i++) {
+                    bit16Array[i] = getSampleBigEndian(inputArray, i);
                 }
                 wavArrays.setBitArrayWav(bit16Array);
 
             } else {
-                for (int i = 0, j = 0; i < audioArraySize / 2; i++, j++) {
-                    bit16Array[i] = getSampleLittleEndian(inputArray, j);
+                for (int i = 0; i < audioArraySize / 2; i++) {
+                    bit16Array[i] = getSampleLittleEndian(inputArray, i);
                 }
                 wavArrays.setBitArrayWav(bit16Array);
             }
@@ -146,6 +183,16 @@ public class AudioManipulation {
                     + " bit");
         }
 
+    }
+
+    public void reverbEffect(double delay, float decay) {
+        short[] inputArray = wavArrays.getBitArrayWav();
+        int delaySamples = (int) ((float) delay * 44.1f);
+        for (int i = 0; i < inputArray.length - delaySamples; i++) {
+            // WARNING: overflow potential
+            inputArray[i + delaySamples] += (short) ((float) inputArray[i] * decay);
+        }
+        samplesToByte(inputArray);
     }
 
     public void echoEffect(byte[] inputArray, double delay, float decay) {

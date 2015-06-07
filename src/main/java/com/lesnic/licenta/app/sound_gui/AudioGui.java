@@ -22,20 +22,25 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.transform.Rotate;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import com.lesnic.licenta.app.audio_effects.AudioManipulation;
-import com.lesnic.licenta.app.audio_effects.JTransformImpl;
+import com.lesnic.licenta.app.audio_effects.FFTImpl;
 import com.lesnic.licenta.app.audio_effects.WavArrays;
+import com.lesnic.licenta.app.model.EqSizes;
 import com.lesnic.licenta.app.model.LinearEq;
 
 public class AudioGui extends Application implements EventHandler<ActionEvent> {
     WavArrays audioStream = WavArrays.getInstance();
-    JTransformImpl fft = new JTransformImpl();
+    FFTImpl fft = new FFTImpl();
     AudioManipulation audio = new AudioManipulation();
+    private EqSizes eqSizes = new EqSizes();
     byte[] originalArray;
     int fileIndex = 0;
     private CheckBox ckBoxSpectrum;
@@ -45,23 +50,52 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
     private GraphicsContext gc;
     private TextField zoomTxt;
     private Label echoDelayJl, echoDecayJl, echoFbJl;
-    private Label echoDelayJlVal, echoDecayJlVal, echoFbJlVal;
     private Canvas canvas;
     private File defaultDirectory;
     private Slider echoDelaySlider, echoDecaySlider, echoFbSlider;
     private double[] fftArray;
     private short[] ifftArray;
     private short[] sampleArray;
-    private Slider slider;
     private HBox eqSliders = new HBox(10);
+    private static Rectangle eqLine31;
+    private static Rectangle eqLine63;
+    private static Rectangle eqLine125;
+    private static Rectangle eqLine250;
+    private static Rectangle eqLine500;
+    private static Rectangle eqLine1k;
+    private static Rectangle eqLine2k;
+    private static Rectangle eqLine4k;
+    private static Rectangle eqLine8k;
+    private static Rectangle eqLine16k;
 
     @Override
     public void start(final Stage stage) throws Exception {
+        defaultDirectory = new File(
+                "C:\\Users\\Dima\\Proiect Licenta\\AudioPlayExample_SourceDataLine\\sounds");
+
+        eqLine31 = new Rectangle(20, 80);
+        eqLine63 = new Rectangle(20, 80);
+        eqLine125 = new Rectangle(20, 80);
+        eqLine250 = new Rectangle(20, 80);
+        eqLine500 = new Rectangle(20, 80);
+        eqLine1k = new Rectangle(20, 80);
+        eqLine2k = new Rectangle(20, 80);
+        eqLine4k = new Rectangle(20, 80);
+        eqLine8k = new Rectangle(20, 80);
+        eqLine16k = new Rectangle(20, 80);
 
         stage.setTitle("Equalizer");
         stage.setMaximized(true);
-        defaultDirectory = new File(
-                "C:\\Users\\Dima\\Proiect Licenta\\AudioPlayExample_SourceDataLine\\sounds");
+
+        Pane topComponents = new Pane();
+        topComponents.setPrefHeight(300);
+        HBox eqLines = new HBox(10);
+        eqLines.setLayoutX(300);
+        eqLines.setLayoutY(100);
+        final Rotate rotationTransform = new Rotate(180,
+                300 + eqLines.getWidth() / 1, 50 + eqLines.getHeight());
+        eqLines.getTransforms().add(rotationTransform);
+        VBox topBtns = new VBox();
 
         VBox root = new VBox();
         VBox rootVSlider = new VBox(10);
@@ -104,7 +138,6 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
 
             public void handle(ActionEvent event) {
                 fileChooser = new FileChooser();
-
                 fileChooser.setInitialDirectory(defaultDirectory);
                 fileChooser.setTitle("Open Resource File");
                 soundFile = fileChooser.showOpenDialog(stage);
@@ -113,7 +146,7 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
                 for (int i = 0; i < originalArray.length; i++) {
                     originalArray[i] = audioStream.getSampleArrayWav()[i];
                 }
-                audio.setWavGraph(audioStream.getSampleArrayWav());
+                audio.computeWavSamples(audioStream.getSampleArrayWav());
             }
         });
         ckBoxSpectrum.selectedProperty().addListener(
@@ -122,28 +155,28 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
                             ObservableValue<? extends Boolean> observable,
                             Boolean oldValue, Boolean newValue) {
                         if (newValue) {
-                            audio.setWavGraph(audioStream.getSampleArrayWav());
+                            audio.computeWavSamples(audioStream
+                                    .getSampleArrayWav());
                             sampleArray = audioStream.getBitArrayWav();
                             fft.writeTxt(sampleArray, "out/originalSamples");
                             fftArray = fft.calcFFT(sampleArray);
-                            fft.writeTxt(fftArray, "out/fft");
                             fft.calcMangFreq(fftArray);
 
-                            createMonitoredSlider(31, fftArray, eqSliders);
-                            createMonitoredSlider(63, fftArray, eqSliders);
-                            createMonitoredSlider(87, fftArray, eqSliders);
-                            createMonitoredSlider(125, fftArray, eqSliders);
-                            createMonitoredSlider(175, fftArray, eqSliders);
-                            createMonitoredSlider(250, fftArray, eqSliders);
-                            createMonitoredSlider(350, fftArray, eqSliders);
-                            createMonitoredSlider(500, fftArray, eqSliders);
-                            createMonitoredSlider(700, fftArray, eqSliders);
+                            // createMonitoredSlider(31, fftArray, eqSliders);
+                            // createMonitoredSlider(63, fftArray, eqSliders);
+                            // createMonitoredSlider(87, fftArray, eqSliders);
+                            // createMonitoredSlider(125, fftArray, eqSliders);
+                            // createMonitoredSlider(175, fftArray, eqSliders);
+                            // createMonitoredSlider(250, fftArray, eqSliders);
+                            // createMonitoredSlider(350, fftArray, eqSliders);
+                            // createMonitoredSlider(500, fftArray, eqSliders);
+                            // createMonitoredSlider(700, fftArray, eqSliders);
                             createMonitoredSlider(1000, fftArray, eqSliders);
-                            createMonitoredSlider(1400, fftArray, eqSliders);
-                            createMonitoredSlider(2800, fftArray, eqSliders);
-                            createMonitoredSlider(4000, fftArray, eqSliders);
-                            createMonitoredSlider(5600, fftArray, eqSliders);
-                            createMonitoredSlider(8000, fftArray, eqSliders);
+                            // createMonitoredSlider(1400, fftArray, eqSliders);
+                            // createMonitoredSlider(2800, fftArray, eqSliders);
+                            // createMonitoredSlider(4000, fftArray, eqSliders);
+                            // createMonitoredSlider(5600, fftArray, eqSliders);
+                            // createMonitoredSlider(8000, fftArray, eqSliders);
 
                         }
                     }
@@ -156,8 +189,12 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
         rootVSlider.getChildren().addAll(echoDelaySlider, echoDecaySlider,
                 echoFbSlider);
         rootSlName.getChildren().addAll(echoDelayJl, echoDecayJl, echoFbJl);
-        root.getChildren().addAll(playBtn, loadBtn, rootLoad, echoBtn,
+        topBtns.getChildren().addAll(playBtn, loadBtn, rootLoad, echoBtn,
                 ckBoxSpectrum);
+        root.getChildren().addAll(topComponents);
+        eqLines.getChildren().addAll(eqLine31, eqLine63, eqLine125, eqLine250,
+                eqLine500, eqLine1k, eqLine2k, eqLine4k, eqLine8k, eqLine16k);
+        topComponents.getChildren().addAll(topBtns, eqLines);
         root.getChildren().add(sp);
         rootAllSlider.getChildren().addAll(rootSlName, rootVSlider, eqSliders);
         root.getChildren().add(rootAllSlider);
@@ -241,11 +278,21 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
 
     public void handle(ActionEvent event) {
         if (event.getSource() == playBtn) {
-            try {
-                audio.playWav();
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
+            Thread threadPlay = new Thread() {
+                @Override
+                public void run() { // override the run() for the
+                                    // running behaviors
+                    try {
+                        audio.playWav();
+                        sleep(10); // milliseconds
+                    } catch (InterruptedException ex) {
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            };
+            threadPlay.start(); // call back run()
 
         } else if (event.getSource() == graphBtn) {
             if (ckBoxSpectrum.isSelected()) {
@@ -265,7 +312,7 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
     }
 
     private Slider createMonitoredSlider(final int freq,
-            final double[] iFFtArray, HBox vbox) {
+            final double[] fftInput, HBox vbox) {
 
         final Slider slider = new Slider(-100, 100, 0);
         vbox.getChildren().add(slider);
@@ -280,22 +327,24 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
                             ObservableValue<? extends Boolean> observableValue,
                             Boolean wasChanging, Boolean changing) {
                         if (wasChanging) {
+                            fft.writeTxt(fftInput, "out/fft");
                             if (slider.getValue() < 0) {
                                 double offset = -slider.getValue();
                                 System.out.println("slider Value " + offset);
                                 final LinearEq lineEq = new LinearEq(0, 0,
                                         offset, offset);
-                                lineEq.linearInterpolation(freq, iFFtArray,
-                                        freq, true);
-                                fft.writeTxt(iFFtArray, "out/fftInterpolated");
+                                // lineEq.linearInterpolation(freq, fftInput,
+                                // freq, true);
+                                lineEq.ZeroInterpolation(freq, fftInput, freq);
+                                fft.writeTxt(fftInput, "out/fftInterpolated");
                             } else {
                                 double offset = slider.getValue();
                                 System.out.println("slider Value " + offset);
                                 final LinearEq lineEq = new LinearEq(0, 0,
                                         offset, offset);
-                                lineEq.linearInterpolation(freq, iFFtArray,
+                                lineEq.linearInterpolation(freq, fftInput,
                                         freq, true);
-                                fft.writeTxt(iFFtArray, "out/fftInterpolated");
+                                fft.writeTxt(fftInput, "out/fftInterpolated");
 
                             }
                         }
@@ -304,5 +353,45 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
 
         return slider;
 
+    }
+
+    public static Rectangle getEqLine31() {
+        return eqLine31;
+    }
+
+    public static Rectangle getEqLine63() {
+        return eqLine63;
+    }
+
+    public static Rectangle getEqLine125() {
+        return eqLine125;
+    }
+
+    public static Rectangle getEqLine250() {
+        return eqLine250;
+    }
+
+    public static Rectangle getEqLine500() {
+        return eqLine500;
+    }
+
+    public static Rectangle getEqLine1k() {
+        return eqLine1k;
+    }
+
+    public static Rectangle getEqLine2k() {
+        return eqLine2k;
+    }
+
+    public static Rectangle getEqLine4k() {
+        return eqLine4k;
+    }
+
+    public static Rectangle getEqLine8k() {
+        return eqLine8k;
+    }
+
+    public static Rectangle getEqLine16k() {
+        return eqLine16k;
     }
 }

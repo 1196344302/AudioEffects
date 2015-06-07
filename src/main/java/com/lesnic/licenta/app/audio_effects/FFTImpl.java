@@ -9,7 +9,7 @@ import org.jtransforms.fft.DoubleFFT_1D;
 
 import com.lesnic.licenta.app.model.Complex;
 
-public class JTransformImpl {
+public class FFTImpl {
 
     private double[] freg;
     private double[] magnitude;
@@ -33,11 +33,10 @@ public class JTransformImpl {
         for (int i = 0; i < byteArr.length; i++) {
             complexArray[i] = (double) byteArr[i];
         }
-
+        // System.arraycopy(byteArr, 0, complexArray, 0, byteArr.length);
         fft = new DoubleFFT_1D(byteArr.length);
         // HanningWindow(complexArray, 0, 2048);
-        fft.realForward(complexArray);
-
+        fft.realForwardFull(complexArray);
         return complexArray;
     }
 
@@ -50,7 +49,7 @@ public class JTransformImpl {
         int size = input.length / 2;
         freg = new double[size];
         magnitude = new double[size];
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < size / 2; i++) {
             re = input[2 * i];
             im = input[2 * i + 1];
             magnitude[i] = Math.sqrt(re * re + im * im);
@@ -58,7 +57,7 @@ public class JTransformImpl {
             freg[i] = (double) i * sampleRate / (double) size;
 
         }
-        System.out.println("Freg " + freg[size - 1]);
+        getMaxFreq();
     }
 
     public void HanningWindow(double[] signal_in, int pos, int size) {
@@ -100,7 +99,7 @@ public class JTransformImpl {
     public double getMaxFreq() {
         int maxIndex = 0;
         double maxFreq = magnitude[0];
-        for (int i = 0; i < magnitude.length / 2; i++) {
+        for (int i = 0; i < magnitude.length; i++) {
             if (maxFreq < magnitude[i]) {
                 maxFreq = magnitude[i];
                 maxIndex = i;
