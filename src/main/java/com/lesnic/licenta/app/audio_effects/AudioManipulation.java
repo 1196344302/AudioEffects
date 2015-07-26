@@ -1,7 +1,9 @@
 package com.lesnic.licenta.app.audio_effects;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Scanner;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -11,18 +13,19 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import com.lesnic.licenta.app.model.EqSizes;
 import com.lesnic.licenta.app.sound_gui.AudioGui;
+import com.lesnic.licenta.app.utils.EqSizes;
 
 /**
  * Create a instance for 16 bit Wav audio manipulation (time domain)
  * 
  */
 public class AudioManipulation {
-    public static final int SOUND_BUFFER = 44100;
+    public static final int SOUND_BUFFER = 8192;
     private FFTImpl fft = new FFTImpl();
     private EqSizes eqSizes = new EqSizes();
     WavArrays wavArrays = WavArrays.getInstance();
+    public static final int[] KERNEL = { 1, 3, 7, 9, 21, 9, 7, 3, 1 };
 
     /**
      * Writes audio data to the mixer via the source data line. The requested
@@ -33,20 +36,21 @@ public class AudioManipulation {
      * @throws IOException
      */
     public void playWav() throws IOException {
-        // reverbEffect(100, 0.6f);
+        AudioInputStream audioIn = wavArrays.getAudioIn();
+        AudioFormat audioFormat = audioIn.getFormat();
+        DataLine.Info info = new DataLine.Info(SourceDataLine.class,
+                audioFormat);
+        SourceDataLine audioLine = null;
+        // reverbEffect(500, 0.6f, audioFormat.getSampleRate());
         // get the current byte array
         byte[] inputPlay = wavArrays.getSampleArrayWav();
         byte[] audioBuffer = new byte[SOUND_BUFFER];
 
         double[] fftOutput;
         short[] ifftOutput;
-        long startTime;
-        long endTime;
-        AudioInputStream audioIn = wavArrays.getAudioIn();
-        AudioFormat audioFormat = audioIn.getFormat();
-        DataLine.Info info = new DataLine.Info(SourceDataLine.class,
-                audioFormat);
-        SourceDataLine audioLine = null;
+        short[] iR = new short[SOUND_BUFFER / 2];
+        getIR(iR);
+
         try {
 
             audioLine = (SourceDataLine) AudioSystem.getLine(info);
@@ -58,23 +62,23 @@ public class AudioManipulation {
                     audioBuffer[j] = inputPlay[(i * SOUND_BUFFER) + j];
                 }
                 computeWavSamples(audioBuffer);
+                // multiplyArr(wavArrays.getBitArrayWav(), iR);
                 fftOutput = fft.calcFFT(wavArrays.getBitArrayWav());
                 fft.calcMangFreq(fftOutput);
                 ifftOutput = fft.calcInverseFFT(fftOutput);
                 samplesToByte(ifftOutput);
                 audioBuffer = wavArrays.getSampleArrayWav();
                 audioLine.write(audioBuffer, 0, audioBuffer.length);
-                AudioGui.getEqLine31().setHeight(fft.getMagnitude()[30] / 2);
-                AudioGui.getEqLine63().setHeight(fft.getMagnitude()[62] / 2);
-                AudioGui.getEqLine125().setHeight(fft.getMagnitude()[124] / 2);
-                AudioGui.getEqLine250().setHeight(fft.getMagnitude()[249] / 2);
-                AudioGui.getEqLine500().setHeight(fft.getMagnitude()[499] / 2);
-                AudioGui.getEqLine1k().setHeight(fft.getMagnitude()[999] / 2);
-                AudioGui.getEqLine2k().setHeight(fft.getMagnitude()[1999] / 2);
-                AudioGui.getEqLine4k().setHeight(fft.getMagnitude()[3999] / 2);
-                AudioGui.getEqLine8k().setHeight(fft.getMagnitude()[7999] / 2);
-                AudioGui.getEqLine16k()
-                        .setHeight(fft.getMagnitude()[15999] / 2);
+                AudioGui.getEqLine31().setHeight(fft.getMagnitude()[1] / 2);
+                AudioGui.getEqLine63().setHeight(fft.getMagnitude()[2] / 2);
+                AudioGui.getEqLine125().setHeight(fft.getMagnitude()[4] / 2);
+                AudioGui.getEqLine250().setHeight(fft.getMagnitude()[8] / 2);
+                AudioGui.getEqLine500().setHeight(fft.getMagnitude()[16] / 2);
+                AudioGui.getEqLine1k().setHeight(fft.getMagnitude()[32] / 2);
+                AudioGui.getEqLine2k().setHeight(fft.getMagnitude()[64] / 2);
+                AudioGui.getEqLine4k().setHeight(fft.getMagnitude()[128] / 2);
+                AudioGui.getEqLine8k().setHeight(fft.getMagnitude()[256] / 2);
+                AudioGui.getEqLine16k().setHeight(fft.getMagnitude()[500] / 2);
 
             }
             // audioLine.write(inputPlay, 0, inputPlay.length);
@@ -143,6 +147,9 @@ public class AudioManipulation {
         }
     }
 
+    // private void covolutin(short sample) {
+    // }
+
     /**
      * Obtains the size of a sample, get the number of bits and stores them into
      * bitArrayWav
@@ -185,9 +192,35 @@ public class AudioManipulation {
 
     }
 
-    public void reverbEffect(double delay, float decay) {
+    public void multiplyArr(short[] audio, short[] iR) {
+        for (int i = 0; i < iR.length; i++) {
+            audio[i] *= iR[i];
+        }
+    }
+
+    public void getIR(short[] iR) {
+        int i = 0;
+        Scanner scan;
+        File file = new File("ir.txt");
+        try {
+            scan = new Scanner(file);
+
+            while (scan.hasNextDouble()) {
+                iR[i] = (short) scan.nextDouble();
+                i++;
+            }
+
+        } catch (FileNotFoundException e1) {
+            e1.printStackTrace();
+        }
+
+    }
+
+    public void reverbEffect(double delay, float decay, float sampleRate) {
+
         short[] inputArray = wavArrays.getBitArrayWav();
-        int delaySamples = (int) ((float) delay * 44.1f);
+        // assumes 44100 Hz sample rate
+        int delaySamples = (int) ((float) delay * sampleRate);
         for (int i = 0; i < inputArray.length - delaySamples; i++) {
             // WARNING: overflow potential
             inputArray[i + delaySamples] += (short) ((float) inputArray[i] * decay);

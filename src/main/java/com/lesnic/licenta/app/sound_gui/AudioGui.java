@@ -33,8 +33,8 @@ import javafx.stage.Stage;
 import com.lesnic.licenta.app.audio_effects.AudioManipulation;
 import com.lesnic.licenta.app.audio_effects.FFTImpl;
 import com.lesnic.licenta.app.audio_effects.WavArrays;
-import com.lesnic.licenta.app.model.EqSizes;
-import com.lesnic.licenta.app.model.LinearEq;
+import com.lesnic.licenta.app.utils.EqSizes;
+import com.lesnic.licenta.app.utils.LinearEq;
 
 public class AudioGui extends Application implements EventHandler<ActionEvent> {
     WavArrays audioStream = WavArrays.getInstance();
@@ -70,8 +70,7 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
 
     @Override
     public void start(final Stage stage) throws Exception {
-        defaultDirectory = new File(
-                "C:\\Users\\Dima\\Proiect Licenta\\AudioPlayExample_SourceDataLine\\sounds");
+        defaultDirectory = new File("sounds");
 
         eqLine31 = new Rectangle(20, 80);
         eqLine63 = new Rectangle(20, 80);
@@ -171,7 +170,7 @@ public class AudioGui extends Application implements EventHandler<ActionEvent> {
                             // createMonitoredSlider(350, fftArray, eqSliders);
                             // createMonitoredSlider(500, fftArray, eqSliders);
                             // createMonitoredSlider(700, fftArray, eqSliders);
-                            createMonitoredSlider(1000, fftArray, eqSliders);
+                            // createMonitoredSlider(1000, fftArray, eqSliders);
                             // createMonitoredSlider(1400, fftArray, eqSliders);
                             // createMonitoredSlider(2800, fftArray, eqSliders);
                             // createMonitoredSlider(4000, fftArray, eqSliders);

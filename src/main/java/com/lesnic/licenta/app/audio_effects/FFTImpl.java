@@ -7,7 +7,7 @@ import java.util.List;
 
 import org.jtransforms.fft.DoubleFFT_1D;
 
-import com.lesnic.licenta.app.model.Complex;
+import com.lesnic.licenta.app.utils.Complex;
 
 public class FFTImpl {
 
@@ -33,7 +33,6 @@ public class FFTImpl {
         for (int i = 0; i < byteArr.length; i++) {
             complexArray[i] = (double) byteArr[i];
         }
-        // System.arraycopy(byteArr, 0, complexArray, 0, byteArr.length);
         fft = new DoubleFFT_1D(byteArr.length);
         // HanningWindow(complexArray, 0, 2048);
         fft.realForwardFull(complexArray);
@@ -47,9 +46,9 @@ public class FFTImpl {
         double sampleRate = audio.getAudioIn().getFormat().getSampleRate();
         double re, im;
         int size = input.length / 2;
-        freg = new double[size];
-        magnitude = new double[size];
-        for (int i = 0; i < size / 2; i++) {
+        freg = new double[size / 2];
+        magnitude = new double[size / 2];
+        for (int i = 1; i < size / 2; i++) {
             re = input[2 * i];
             im = input[2 * i + 1];
             magnitude[i] = Math.sqrt(re * re + im * im);

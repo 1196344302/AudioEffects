@@ -1,4 +1,4 @@
-package com.lesnic.licenta.app.model;
+package com.lesnic.licenta.app.utils;
 
 /**
  * 
